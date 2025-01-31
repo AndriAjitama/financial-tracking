@@ -16,20 +16,11 @@ class Tabs extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Color(0xFFF1F3F9),
-          title: const Text(
-            'Transactions',
-            style: TextStyle(
-              fontSize: 25,
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
+          backgroundColor: Colors.white,
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(40),
+            preferredSize: const Size.fromHeight(0),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
+              margin: const EdgeInsets.symmetric(horizontal: 15),
               height: 40,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
@@ -39,13 +30,13 @@ class Tabs extends StatelessWidget {
                 ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 child: TabBar(
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.black,
                   indicator: BoxDecoration(
                     color: Colors.green,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
                   labelStyle: TextStyle(
@@ -68,7 +59,8 @@ class Tabs extends StatelessWidget {
           ),
         ),
         body: Container(
-          color: Color(0xFFF1F3F9),
+          color: Colors.white,
+          margin: const EdgeInsets.symmetric(vertical: 10),
           child: TabBarView(
             children: [
               FinancialTrackingList(type: null),
@@ -84,6 +76,7 @@ class Tabs extends StatelessWidget {
               MaterialPageRoute(builder: (context) => AddFinancialTracking()),
             );
           },
+          heroTag: 'AddFinancialTracking',
           child: Icon(Icons.add),
           backgroundColor: Colors.green,
         ),

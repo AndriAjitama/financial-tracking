@@ -1,9 +1,10 @@
 // ignore_for_file: prefer_const_literals_to_create_immutables
 
-import 'package:financial_tracking/pages/financial.dart';
-import 'package:financial_tracking/pages/financial/financial_list.dart';
-import 'package:financial_tracking/pages/financial/financial_tracking_summary_card.dart';
 import 'package:flutter/material.dart';
+import 'package:financial_tracking/pages/transaction/bar_chart.dart';
+import 'package:financial_tracking/pages/transaction/donut_chart.dart';
+import 'package:financial_tracking/pages/transaction/horizontal_bar_chart.dart';
+import 'package:financial_tracking/pages/transaction/summary_transaction.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -16,9 +17,10 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F3F9),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF1F3F9),
+        backgroundColor: Colors.white,
+        toolbarHeight: 40,
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
@@ -41,64 +43,35 @@ class _HomeState extends State<Home> {
           ],
         ),
       ),
-      body: Container(
-        margin: const EdgeInsets.only(left: 20, right: 20, top: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const FinancialTrackingSummaryCard(),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Transactions',
-                  style: TextStyle(
-                    fontSize: 25,
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => Financial()),
-                    );
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.green[100],
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.green),
-                    ),
-                    child: Row(
-                      children: const [
-                        Text(
-                          'View more',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
-                        ),
-                        SizedBox(width: 5),
-                        Icon(
-                          Icons.arrow_forward,
-                          color: Colors.black,
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Expanded(
-              child: FinancialTrackingList(),
-            ),
-          ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Summary section
+              const SummaryTransaction(),
+              const SizedBox(height: 10),
+
+              // Donut Chart Section
+              SizedBox(
+                height: 410,
+                child: DonutChartPage(),
+              ),
+              const SizedBox(height: 20),
+              // Horizontal Bar Chart Section
+              SizedBox(
+                height: 700,
+                child: HorizontalBarChartPage(),
+              ),
+              // Bar Chart Section
+              SizedBox(
+                height: 400,
+                child: BarChartPage(),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

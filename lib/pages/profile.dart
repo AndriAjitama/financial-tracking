@@ -50,7 +50,8 @@ class Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: Color(0xFFF1F3F9),
+          backgroundColor: Colors.white,
+          toolbarHeight: 40,
           title: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
@@ -74,7 +75,7 @@ class Profile extends StatelessWidget {
           ),
         ),
         body: Container(
-          color: Color(0xFFF1F3F9),
+          color: Colors.white,
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

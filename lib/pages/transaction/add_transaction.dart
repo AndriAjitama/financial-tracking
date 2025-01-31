@@ -7,29 +7,64 @@ import 'package:intl/intl.dart';
 import 'package:random_string/random_string.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
-class AddWishlist extends StatefulWidget {
-  const AddWishlist({super.key});
+class AddTransaction extends StatefulWidget {
+  const AddTransaction({super.key});
 
   @override
-  State<AddWishlist> createState() => _AddWishlistState();
+  State<AddTransaction> createState() => _AddTransactionState();
 }
 
-class _AddWishlistState extends State<AddWishlist> {
-  String _selectedType = 'Not Yet Achieved';
-  final TextEditingController _titleController = TextEditingController();
+class _AddTransactionState extends State<AddTransaction> {
+  String _selectedType = 'Income';
+  String _selectedCategory = 'Salary';
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _planningDateController = TextEditingController();
-  final TextEditingController _dateReachedController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
+
+  // Daftar kategori berdasarkan jenis transaksi
+  final Map<String, List<String>> _categories = {
+    'Income': [
+      'Salary',
+      'Gift',
+      'Asset Sales',
+      'Business',
+      'Freelance',
+      'Other'
+    ],
+    'Expense': [
+      'Cigarette',
+      'Fuel',
+      'Food',
+      'Drink',
+      'Bill',
+      'Investment',
+      'Installment',
+      'Housing',
+      'Personal Needs',
+      'Transportation',
+      'Communication',
+      'Education',
+      'Health & Insurance',
+      'Entertainment',
+      'Donation',
+      'Other'
+    ],
+  };
 
   @override
   void dispose() {
-    _titleController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
-    _planningDateController.dispose();
-    _dateReachedController.dispose();
+    _dateController.dispose();
     super.dispose();
+  }
+
+// Fungsi untuk memperbarui kategori berdasarkan jenis transaksi
+  void _updateCategoryList() {
+    setState(() {
+      // Tetapkan kategori pertama dari jenis transaksi yang dipilih sebagai default
+      _selectedCategory = _categories[_selectedType]!.first;
+    });
   }
 
   void _formatAmount() {
@@ -103,10 +138,7 @@ class _AddWishlistState extends State<AddWishlist> {
       suffixIcon: context != null
           ? IconButton(
               icon: Icon(Icons.calendar_today),
-              onPressed: () {
-                _selectDate(context, _planningDateController);
-                _selectDate(context, _dateReachedController);
-              },
+              onPressed: () => _selectDate(context, _dateController),
             )
           : null,
     );
@@ -129,10 +161,11 @@ class _AddWishlistState extends State<AddWishlist> {
   }
 
   bool _validateInputs() {
-    if (_titleController.text.isEmpty ||
+    if (_selectedType.isEmpty ||
+        _selectedCategory.isEmpty ||
         _amountController.text.isEmpty ||
         _descriptionController.text.isEmpty ||
-        _planningDateController.text.isEmpty) {
+        _dateController.text.isEmpty) {
       Fluttertoast.showToast(
         msg: "Semua kolom wajib diisi!",
         toastLength: Toast.LENGTH_SHORT,
@@ -147,48 +180,23 @@ class _AddWishlistState extends State<AddWishlist> {
     if (!_validateInputs()) return;
 
     try {
-      // Generate unique ID
       String id = randomAlphaNumeric(10);
-
-      // Parse amount
       int amount =
           int.parse(_amountController.text.replaceAll(RegExp(r'\D'), ''));
+      DateTime date = DateFormat('dd-MM-yyyy').parse(_dateController.text);
 
-      // Parse planningDate
-      DateTime planningDate =
-          DateFormat('dd-MM-yyyy').parse(_planningDateController.text);
-
-      // Handle dateReached
-      Timestamp? dateReached;
-      if (_selectedType == 'Already Achieved' &&
-          _dateReachedController.text.isNotEmpty) {
-        dateReached = Timestamp.fromDate(
-            DateFormat('dd-MM-yyyy').parse(_dateReachedController.text));
-      } else {
-        dateReached = null; // Explicitly set to null if not provided
-      }
-
-      // Create the data map
-      Map<String, dynamic> wishlistInfoMap = {
+      Map<String, dynamic> transactionInfoMap = {
         'id': id,
         'type': _selectedType,
-        'title': _titleController.text.trim(),
+        'category': _selectedCategory,
         'amount': amount,
         'description': _descriptionController.text.trim(),
-        'planningDate': Timestamp.fromDate(planningDate),
-        'dateReached': dateReached,
+        'date': Timestamp.fromDate(date),
         'timestamp': FieldValue.serverTimestamp(),
       };
 
-      // Include dateReached only if it is not null
-      if (dateReached != null) {
-        wishlistInfoMap['dateReached'] = dateReached;
-      }
+      await DatabaseMethods().addTransaction(transactionInfoMap, id);
 
-      // Save to the database
-      await DatabaseMethods().addWishlist(wishlistInfoMap, id);
-
-      // Show success message
       Fluttertoast.showToast(
         msg: "Data berhasil disimpan!",
         toastLength: Toast.LENGTH_SHORT,
@@ -199,17 +207,14 @@ class _AddWishlistState extends State<AddWishlist> {
         fontSize: 14,
       );
 
-      // Reset form
       setState(() {
-        _selectedType = 'Not Yet Achieved';
-        _titleController.clear();
+        _selectedType = 'Income';
+        _selectedCategory = 'Salary';
         _amountController.clear();
         _descriptionController.clear();
-        _planningDateController.clear();
-        _dateReachedController.clear();
+        _dateController.clear();
       });
     } catch (e) {
-      // Show error message
       Fluttertoast.showToast(
         msg: "Terjadi kesalahan: ${e.toString()}",
         toastLength: Toast.LENGTH_LONG,
@@ -242,7 +247,7 @@ class _AddWishlistState extends State<AddWishlist> {
                     color: Colors.purple,
                     fontSize: 20,
                     fontWeight: FontWeight.bold)),
-            Text('Wishlist',
+            Text('Transaction',
                 style: TextStyle(
                     color: Colors.orange,
                     fontSize: 30,
@@ -273,6 +278,8 @@ class _AddWishlistState extends State<AddWishlist> {
                             ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
+                                menuMaxHeight: 350,
+                                borderRadius: BorderRadius.circular(10),
                                 isExpanded: true,
                                 value: _selectedType,
                                 icon: Icon(Icons.arrow_drop_down),
@@ -281,13 +288,16 @@ class _AddWishlistState extends State<AddWishlist> {
                                 style: TextStyle(
                                     color: Colors.black, fontSize: 16),
                                 onChanged: (String? newValue) {
-                                  setState(() {
-                                    _selectedType = newValue!;
-                                  });
+                                  if (newValue != null) {
+                                    setState(() {
+                                      _selectedType = newValue;
+                                    });
+                                    _updateCategoryList();
+                                  }
                                 },
                                 items: <String>[
-                                  'Not Yet Achieved',
-                                  'Already Achieved',
+                                  'Income',
+                                  'Expense',
                                 ].map<DropdownMenuItem<String>>((String value) {
                                   final isSelected = value == _selectedType;
                                   return DropdownMenuItem<String>(
@@ -339,11 +349,95 @@ class _AddWishlistState extends State<AddWishlist> {
                   ],
                 ),
               ),
-
               SizedBox(height: 20),
-              TextField(
-                  controller: _titleController,
-                  decoration: _inputDecoration('Title')),
+
+              Container(
+                child: Stack(
+                  children: [
+                    Container(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                  color: Colors.grey.shade600, width: 1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                menuMaxHeight: 350,
+                                borderRadius: BorderRadius.circular(10),
+                                isExpanded: true,
+                                value: _selectedCategory,
+                                icon: Icon(Icons.arrow_drop_down),
+                                iconSize: 24,
+                                dropdownColor: Colors.white,
+                                style: TextStyle(
+                                    color: Colors.black, fontSize: 16),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      _selectedCategory = newValue;
+                                    });
+                                  }
+                                },
+                                items: _categories[_selectedType]!
+                                    .map<DropdownMenuItem<String>>(
+                                        (String value) {
+                                  final isSelected = value == _selectedCategory;
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 8, horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.green.shade100
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        value,
+                                        style: TextStyle(
+                                          color: isSelected
+                                              ? Colors.green
+                                              : Colors.black,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            left: 10,
+                            top: -6,
+                            child: Container(
+                              color: Colors.white,
+                              padding: EdgeInsets.symmetric(horizontal: 6),
+                              child: Text(
+                                'Select Category',
+                                style: TextStyle(
+                                  color: Colors.blue,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               SizedBox(height: 20),
               TextField(
                   controller: _amountController,
@@ -356,22 +450,11 @@ class _AddWishlistState extends State<AddWishlist> {
                   decoration: _inputDecoration('Description')),
               SizedBox(height: 20),
               GestureDetector(
-                onTap: () => _selectDate(context, _planningDateController),
+                onTap: () => _selectDate(context, _dateController),
                 child: AbsorbPointer(
                   child: TextField(
-                      controller: _planningDateController,
-                      decoration:
-                          _inputDecoration('Select Planning Date', context)),
-                ),
-              ),
-              SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => _selectDate(context, _dateReachedController),
-                child: AbsorbPointer(
-                  child: TextField(
-                      controller: _dateReachedController,
-                      decoration:
-                          _inputDecoration('Select Date Reached', context)),
+                      controller: _dateController,
+                      decoration: _inputDecoration('Select Date', context)),
                 ),
               ),
               SizedBox(height: 30),

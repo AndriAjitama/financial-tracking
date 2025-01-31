@@ -159,4 +159,98 @@ class DatabaseMethods {
       print('Error deleting task details: $e');
     }
   }
+
+  //////////////////////////////////////////// MONEY ////////////////////////////////////////////
+  Future<void> addMoney(Map<String, dynamic> moneyInfoMap, String id) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Money")
+          .doc(id)
+          .set(moneyInfoMap);
+    } catch (e) {
+      print('Error adding money details: $e');
+    }
+  }
+
+  Future<Stream<QuerySnapshot>> getMoney() async {
+    try {
+      return await FirebaseFirestore.instance
+          .collection("Money")
+          .orderBy('timestamp', descending: true)
+          .snapshots();
+    } catch (e) {
+      print('Error getting money details: $e');
+    }
+
+    throw Exception('Failed to get money details.'); // Add this line
+  }
+
+  Future updateMoney(Map<String, dynamic> updateMoneyInfoMap, String id,
+      String selectedCategory) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Money")
+          .doc(id)
+          .update(updateMoneyInfoMap);
+    } catch (e) {
+      print('Error updating money details: $e');
+    }
+  }
+
+  Future deleteMoney(String id) async {
+    try {
+      await FirebaseFirestore.instance.collection("Money").doc(id).delete();
+    } catch (e) {
+      print('Error deleting money details: $e');
+    }
+  }
+
+  //////////////////////////////////////////// TRANSACTION ////////////////////////////////////////////
+  Future<void> addTransaction(
+      Map<String, dynamic> transactionInfoMap, String id) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Transaction")
+          .doc(id)
+          .set(transactionInfoMap);
+    } catch (e) {
+      print('Error adding transaction details: $e');
+    }
+  }
+
+  Future<Stream<QuerySnapshot>> getTransaction() async {
+    try {
+      return await FirebaseFirestore.instance
+          .collection("Transaction")
+          .orderBy('timestamp', descending: true)
+          .snapshots();
+    } catch (e) {
+      print('Error getting transaction details: $e');
+    }
+
+    throw Exception('Failed to get transaction details.'); // Add this line
+  }
+
+  Future updateTransaction(Map<String, dynamic> updateTransactionInfoMap,
+      String id, String selectedCategory) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Transaction")
+          .doc(id)
+          .update(updateTransactionInfoMap);
+    } catch (e) {
+      print('Error updating transaction details: $e');
+    }
+  }
+
+  Future deleteTransaction(String id) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection("Transaction")
+          .doc(id)
+          .delete();
+    } catch (e) {
+      print('Error deleting transaction details: $e');
+    }
+  }
 }

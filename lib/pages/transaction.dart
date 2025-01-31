@@ -1,10 +1,10 @@
-// ignore_for_file: prefer_const_literals_to_create_immutables, empty_constructor_bodies, use_super_parameters
+// ignore_for_file: file_names, prefer_const_literals_to_create_immutables
 
-import 'package:financial_tracking/pages/task/list_task.dart';
+import 'package:financial_tracking/pages/transaction/list_transaction.dart';
 import 'package:flutter/material.dart';
 
-class Tasks extends StatelessWidget {
-  const Tasks({super.key});
+class Transaction extends StatelessWidget {
+  const Transaction({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class Tasks extends StatelessWidget {
               ),
             ),
             Text(
-              'Tasks',
+              'Transaction',
               style: TextStyle(
                 color: Colors.orange,
                 fontSize: 28,
@@ -35,7 +35,7 @@ class Tasks extends StatelessWidget {
         ),
       ),
       body: Center(
-        child: TaskTab(),
+        child: const TransactionTab(),
       ),
     );
   }

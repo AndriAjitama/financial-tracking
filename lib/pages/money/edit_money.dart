@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 
-Future EditWishlist(
+Future EditMoney(
   BuildContext context,
   String id,
   String selectedType,
+  String selectedCategory,
   TextEditingController titleController,
   TextEditingController amountController,
   TextEditingController descriptionController,
-  TextEditingController planningDateController,
-  TextEditingController dateReachedController,
+  TextEditingController dateController,
   Future<void> Function(BuildContext, TextEditingController) selectDate,
 ) =>
     showDialog(
@@ -24,52 +24,58 @@ Future EditWishlist(
               ),
               backgroundColor: Colors.transparent,
               insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: _EditWishlistDialog(
+              child: _EditMoneyDialog(
                 id: id,
                 selectedType: selectedType,
+                selectedCategory: selectedCategory,
                 titleController: titleController,
                 amountController: amountController,
                 descriptionController: descriptionController,
-                planningDateController: planningDateController,
-                dateReachedController: dateReachedController,
+                dateController: dateController,
                 selectDate: selectDate,
               ),
             ));
 
-class _EditWishlistDialog extends StatefulWidget {
+class _EditMoneyDialog extends StatefulWidget {
   final String id;
   final String selectedType;
+  final String selectedCategory;
   final TextEditingController titleController;
   final TextEditingController amountController;
   final TextEditingController descriptionController;
-  final TextEditingController planningDateController;
-  final TextEditingController dateReachedController;
+  final TextEditingController dateController;
   final Future<void> Function(BuildContext, TextEditingController) selectDate;
 
-  const _EditWishlistDialog({
+  const _EditMoneyDialog({
     Key? key,
     required this.id,
     required this.selectedType,
+    required this.selectedCategory,
     required this.titleController,
     required this.amountController,
     required this.descriptionController,
-    required this.planningDateController,
-    required this.dateReachedController,
+    required this.dateController,
     required this.selectDate,
   }) : super(key: key);
 
   @override
-  __EditWishlistDialogState createState() => __EditWishlistDialogState();
+  __EditMoneyDialogState createState() => __EditMoneyDialogState();
 }
 
-class __EditWishlistDialogState extends State<_EditWishlistDialog> {
+class __EditMoneyDialogState extends State<_EditMoneyDialog> {
   late String selectedType;
+  late String selectedCategory;
 
   @override
   void initState() {
     super.initState();
     selectedType = widget.selectedType;
-
+    selectedCategory = widget.selectedCategory;
+    if (!categories[selectedType]!.contains(selectedCategory)) {
+      selectedCategory = categories[selectedType]!.isNotEmpty
+          ? categories[selectedType]!.first
+          : '';
+    }
     widget.amountController.addListener(_onAmountChange);
   }
 
@@ -131,7 +137,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
     }
   }
 
-  Future<void> updateWishlist() async {
+  Future<void> updateMoney() async {
     try {
       // Mengambil nilai inputan dari form dan memproses sesuai tipe data yang benar
       String id = widget.id;
@@ -139,38 +145,26 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
       int amount =
           int.parse(widget.amountController.text.replaceAll(RegExp(r'\D'), ''));
       String description = widget.descriptionController.text.trim();
-      DateTime planningDate =
-          DateFormat('dd-MM-yyyy').parse(widget.planningDateController.text);
-
-      Timestamp? dateReached;
-      if (selectedType == 'Already Achieved' &&
-          widget.dateReachedController.text.isNotEmpty) {
-        dateReached = Timestamp.fromDate(
-            DateFormat('dd-MM-yyyy').parse(widget.dateReachedController.text));
-      } else {
-        dateReached = null;
-      }
+      DateTime date =
+          DateFormat('dd-MM-yyyy').parse(widget.dateController.text);
 
       // Membuat map data untuk Firestore dengan tipe data yang sesuai
-      Map<String, dynamic> wishlistInfoMap = {
+      Map<String, dynamic> moneyInfoMap = {
         'id': id,
         'type': selectedType,
+        'category': selectedCategory,
         'title': title,
         'amount': amount,
         'description': description,
-        'planningDate': Timestamp.fromDate(planningDate),
-        'dateReached': dateReached,
+        'date': Timestamp.fromDate(date),
         'timestamp': FieldValue.serverTimestamp(),
       };
 
-      if (dateReached != null) {
-        wishlistInfoMap['dateReached'] = dateReached;
-      }
       // Memperbarui data di Firestore
       await FirebaseFirestore.instance
-          .collection('Wishlist')
+          .collection('Money')
           .doc(widget.id)
-          .update(wishlistInfoMap);
+          .update(moneyInfoMap);
 
       Fluttertoast.showToast(
         msg: "Data berhasil disimpan!",
@@ -197,6 +191,25 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
     }
   }
 
+  final Map<String, List<String>> categories = {
+    'Cash': ['Wallet', 'Savings'],
+    'Account': [
+      'Bank BCA',
+      'Bank BRI',
+      'Bank BTN',
+      'Bank BNI',
+      'Bank Jago',
+      'Bank Mandiri',
+      'Gopay',
+      'Dana',
+      'ShopeePay',
+      'SeaBank',
+      'E-Money',
+      'RDN Wallet'
+    ],
+    'Investment': ['Bibit', 'Stockbit', 'Crypto', 'Gold', 'Property'],
+  };
+
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -214,6 +227,8 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
                 SizedBox(height: 20),
                 _buildDropdownType(),
                 SizedBox(height: 20),
+                _buildDropdownCategory(),
+                SizedBox(height: 20),
                 _buildTextField(widget.titleController, 'Title'),
                 SizedBox(height: 20),
                 _buildTextField(widget.amountController, 'Amount',
@@ -221,9 +236,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
                 SizedBox(height: 20),
                 _buildTextField(widget.descriptionController, 'Description'),
                 SizedBox(height: 20),
-                _buildDatePickerPlanning(),
-                SizedBox(height: 20),
-                _buildDatePickerReached(),
+                _buildDatePicker(),
                 SizedBox(height: 30),
                 _buildUpdateButton(),
               ],
@@ -249,7 +262,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
           ),
         ),
         Text(
-          "Edit Wishlist",
+          "Edit Money",
           style: TextStyle(
             color: Colors.orange,
             fontSize: 20,
@@ -284,12 +297,12 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
                 onChanged: (String? newValue) {
                   setState(() {
                     selectedType = newValue!;
+                    // Update category to the first available category for new type
+                    selectedCategory = categories[selectedType]!.first;
                   });
                 },
-                items: <String>[
-                  'Not Yet Achieved',
-                  'Already Achieved',
-                ].map<DropdownMenuItem<String>>((String value) {
+                items: <String>['Cash', 'Account', 'Investment']
+                    .map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Container(
@@ -338,6 +351,83 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
     );
   }
 
+  Container _buildDropdownCategory() {
+    return Container(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey.shade600, width: 1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                menuMaxHeight: 350,
+                borderRadius: BorderRadius.circular(10),
+                isExpanded: true,
+                value: selectedCategory,
+                icon: Icon(Icons.arrow_drop_down),
+                iconSize: 24,
+                dropdownColor: Colors.white,
+                style: TextStyle(color: Colors.black, fontSize: 16),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedCategory = newValue!;
+                  });
+                },
+                items: categories[selectedType]!
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: value == selectedCategory
+                            ? Colors.green.shade100
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          color: value == selectedCategory
+                              ? Colors.green
+                              : Colors.black,
+                          fontWeight: value == selectedCategory
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 10,
+            top: -6,
+            child: Container(
+              color: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                'Select Category',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Container _buildTextField(TextEditingController controller, String label,
       {bool isAmount = false}) {
     return Container(
@@ -368,7 +458,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
     );
   }
 
-  Container _buildDatePickerPlanning() {
+  Container _buildDatePicker() {
     return Container(
       child: Stack(
         clipBehavior: Clip.none,
@@ -383,10 +473,10 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: widget.planningDateController,
+                    controller: widget.dateController,
                     decoration: InputDecoration(
                       border: InputBorder.none,
-                      hintText: 'Select Planning Date',
+                      hintText: 'Select Date',
                     ),
                     readOnly: true,
                   ),
@@ -394,7 +484,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
                 IconButton(
                   icon: Icon(Icons.calendar_today),
                   onPressed: () =>
-                      widget.selectDate(context, widget.planningDateController),
+                      widget.selectDate(context, widget.dateController),
                 ),
               ],
             ),
@@ -406,58 +496,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
               color: Colors.white,
               padding: EdgeInsets.symmetric(horizontal: 6),
               child: Text(
-                'Select Planning Date',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 10,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Container _buildDatePickerReached() {
-    return Container(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade600, width: 1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: widget.dateReachedController,
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      hintText: 'Select Date Reached',
-                    ),
-                    readOnly: true,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.calendar_today),
-                  onPressed: () =>
-                      widget.selectDate(context, widget.dateReachedController),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 10,
-            top: -6,
-            child: Container(
-              color: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Text(
-                'Select Date Reached',
+                'Select Date',
                 style: TextStyle(
                   color: Colors.blue,
                   fontSize: 10,
@@ -474,7 +513,7 @@ class __EditWishlistDialogState extends State<_EditWishlistDialog> {
     return Center(
         widthFactor: double.maxFinite,
         child: ElevatedButton(
-          onPressed: updateWishlist,
+          onPressed: updateMoney,
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             minimumSize: Size(double.infinity, 45),

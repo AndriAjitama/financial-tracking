@@ -1,4 +1,4 @@
-// ignore_for_file: use_key_in_widget_constructors, prefer_const_literals_to_create_immutables, use_super_parameters, await_only_futures, avoid_function_literals_in_foreach_calls, sort_child_properties_last
+// ignore_for_file: unnecessary_const, use_super_parameters, prefer_const_literals_to_create_immutables, sort_child_properties_last, library_private_types_in_public_api, unnecessary_string_interpolations
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:financial_tracking/pages/task/add_task.dart';
@@ -16,45 +16,33 @@ class TaskTab extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: const Color(0xFFF1F3F9),
-          title: const Text(
-            'Tasks',
-            style: TextStyle(
-              fontSize: 25,
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
+          backgroundColor: Colors.white,
+          toolbarHeight: 50,
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(40),
+            preferredSize: const Size.fromHeight(0),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
+              margin: const EdgeInsets.symmetric(horizontal: 15),
               height: 40,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
                 color: Colors.green.shade100,
-                border: Border.all(
-                  color: Colors.green,
-                ),
+                border: Border.all(color: Colors.green),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 child: TabBar(
                   labelColor: Colors.white,
                   unselectedLabelColor: Colors.black,
                   indicator: BoxDecoration(
                     color: Colors.green,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
-                  labelStyle: TextStyle(
-                    fontSize: 15,
-                  ),
-                  tabs: const [
+                  labelStyle: TextStyle(fontSize: 12),
+                  tabs: [
                     Tab(text: 'All'),
-                    Tab(text: 'Tugas'),
-                    Tab(text: 'Selesai'),
+                    Tab(text: 'Task'),
+                    Tab(text: 'Completed'),
                   ],
                 ),
               ),
@@ -62,12 +50,13 @@ class TaskTab extends StatelessWidget {
           ),
         ),
         body: Container(
-          color: const Color(0xFFF1F3F9),
+          color: Colors.white,
+          margin: const EdgeInsets.symmetric(vertical: 10),
           child: const TabBarView(
             children: [
               TaskList(type: null),
-              TaskList(type: 'Tugas'),
-              TaskList(type: 'Selesai'),
+              TaskList(type: 'Task'),
+              TaskList(type: 'Completed'),
             ],
           ),
         ),
@@ -78,6 +67,7 @@ class TaskTab extends StatelessWidget {
               MaterialPageRoute(builder: (context) => AddTask()),
             );
           },
+          heroTag: 'addTask',
           child: const Icon(Icons.add),
           backgroundColor: Colors.green,
         ),
@@ -92,41 +82,35 @@ class TaskList extends StatefulWidget {
   const TaskList({Key? key, this.type}) : super(key: key);
 
   @override
-  State<TaskList> createState() => _TaskListState();
+  _TaskListState createState() => _TaskListState();
 }
 
 class _TaskListState extends State<TaskList> {
-  Stream<QuerySnapshot>? taskStream;
+  late Stream<QuerySnapshot<Object?>> taskStream;
 
   @override
   void initState() {
     super.initState();
-    getTaskData();
-  }
-
-  getTaskData() async {
-    if (widget.type == null) {
-      taskStream = await DatabaseMethods().getTask();
-    } else {
-      taskStream = FirebaseFirestore.instance
-          .collection('Task')
-          .where('type', isEqualTo: widget.type)
-          .snapshots();
-    }
-    setState(() {});
+    taskStream = widget.type == null
+        ? FirebaseFirestore.instance.collection('Task').snapshots()
+        : FirebaseFirestore.instance
+            .collection('Task')
+            .where('type', isEqualTo: widget.type)
+            .snapshots();
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    return StreamBuilder<QuerySnapshot<Object?>>(
       stream: taskStream,
-      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+      builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (snapshot.data!.docs.isEmpty) {
-          return Center(
+        final task = snapshot.data!.docs;
+        if (task.isEmpty) {
+          return const Center(
             child: Text(
               'No items found',
               style: TextStyle(fontSize: 20, color: Colors.grey),
@@ -134,259 +118,20 @@ class _TaskListState extends State<TaskList> {
           );
         }
 
-        List<DocumentSnapshot> tasks = snapshot.data!.docs;
-
-        // Sort tasks by date closest to today
-        tasks.sort((a, b) {
-          DateTime dateA = DateFormat('dd-MM-yyyy').parse(a['dateLine']);
-          DateTime dateB = DateFormat('dd-MM-yyyy').parse(b['dateLine']);
-          DateTime now = DateTime.now();
-          return (dateA.difference(now).inDays)
-              .abs()
-              .compareTo((dateB.difference(now).inDays).abs());
+        task.sort((a, b) {
+          DateTime dateA = (a['dateLine'] as Timestamp).toDate();
+          DateTime dateB = (b['dateLine'] as Timestamp).toDate();
+          return dateA.compareTo(dateB);
         });
 
         return ListView.builder(
-          itemCount: tasks.length,
+          itemCount: task.length,
           itemBuilder: (context, index) {
-            DocumentSnapshot ds = tasks[index];
-            return Center(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 5,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                margin:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(10),
-                        bottomLeft: Radius.circular(10),
-                      ),
-                      child: Container(
-                        width: 15,
-                        height: 145,
-                        color:
-                            ds['type'] == 'Selesai' ? Colors.green : Colors.red,
-                      ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 10, top: 10, bottom: 10, right: 5),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 15),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              ds['title'].length > 20
-                                                  ? ds['title']
-                                                          .substring(0, 20) +
-                                                      '...'
-                                                  : ds['title'],
-                                              style: const TextStyle(
-                                                fontSize: 22,
-                                                color: Colors.green,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Row(
-                                              children: [
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    TextEditingController
-                                                        descriptionController =
-                                                        TextEditingController(
-                                                            text: ds[
-                                                                'description']);
-                                                    TextEditingController
-                                                        dateLineController =
-                                                        TextEditingController(
-                                                            text:
-                                                                ds['dateLine']);
-                                                    TextEditingController
-                                                        titleController =
-                                                        TextEditingController(
-                                                            text: ds['title']);
-
-                                                    EditTask(
-                                                      context,
-                                                      ds.id,
-                                                      ds['type'],
-                                                      titleController,
-                                                      descriptionController,
-                                                      dateLineController,
-                                                      selectDate,
-                                                    );
-                                                  },
-                                                  child: const Icon(
-                                                    Icons.edit,
-                                                    color: Colors.orange,
-                                                    size: 23,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 7),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    showDialog(
-                                                      context: context,
-                                                      builder: (BuildContext
-                                                          context) {
-                                                        return AlertDialog(
-                                                          title: Text(
-                                                            "Delete Confirmation",
-                                                            style: TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                              fontSize: 20,
-                                                              color: Colors.red,
-                                                            ),
-                                                          ),
-                                                          content: Text(
-                                                            "Apakah Anda yakin akan menghapus data ini?",
-                                                            style: TextStyle(
-                                                              fontSize: 16,
-                                                              color:
-                                                                  Colors.black,
-                                                            ),
-                                                          ),
-                                                          actions: [
-                                                            TextButton(
-                                                              onPressed: () {
-                                                                Navigator.of(
-                                                                        context)
-                                                                    .pop();
-                                                              },
-                                                              child: Container(
-                                                                padding: EdgeInsets
-                                                                    .symmetric(
-                                                                        horizontal:
-                                                                            20,
-                                                                        vertical:
-                                                                            10),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              20),
-                                                                  color: Colors
-                                                                      .blue,
-                                                                ),
-                                                                child: Text(
-                                                                  "Cancel",
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        16,
-                                                                    color: Colors
-                                                                        .white,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            TextButton(
-                                                              onPressed: () {
-                                                                Navigator.of(
-                                                                        context)
-                                                                    .pop();
-                                                                DatabaseMethods()
-                                                                    .deleteTask(
-                                                                        ds.id);
-                                                              },
-                                                              child: Container(
-                                                                padding: EdgeInsets
-                                                                    .symmetric(
-                                                                        horizontal:
-                                                                            20,
-                                                                        vertical:
-                                                                            10),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              20),
-                                                                  color: Colors
-                                                                      .red,
-                                                                ),
-                                                                child: Text(
-                                                                  "Delete",
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        16,
-                                                                    color: Colors
-                                                                        .white,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        );
-                                                      },
-                                                    );
-                                                  },
-                                                  child: Icon(
-                                                    Icons.delete,
-                                                    color: Colors.red,
-                                                    size: 23,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          'Date Line: ${ds['dateLine']}',
-                                          style: const TextStyle(
-                                            fontSize: 17,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          'Des: ${ds['description']}',
-                                          style: const TextStyle(fontSize: 15),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            final ds = task[index];
+            return TaskListItem(
+              taskData: ds,
+              onEdit: () => _onEdit(context, ds),
+              onDelete: () => _onDelete(context, ds),
             );
           },
         );
@@ -394,16 +139,199 @@ class _TaskListState extends State<TaskList> {
     );
   }
 
-  Future<void> selectDate(
-      BuildContext context, TextEditingController controller) async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+  void _onEdit(BuildContext context, DocumentSnapshot ds) {
+    TextEditingController titleController =
+        TextEditingController(text: ds['title']);
+    TextEditingController descriptionController =
+        TextEditingController(text: ds['description']);
+    TextEditingController dateLineController = TextEditingController(
+        text: DateFormat('dd-MM-yyyy')
+            .format((ds['dateLine'] as Timestamp).toDate()));
+
+    EditTask(
+      context,
+      ds.id,
+      ds['type'],
+      titleController,
+      descriptionController,
+      dateLineController,
+      selectDate,
     );
-    if (picked != null) {
-      controller.text = DateFormat('dd-MM-yyyy').format(picked);
+  }
+
+  void _onDelete(BuildContext context, DocumentSnapshot ds) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          "Delete Confirmation",
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 20, color: Colors.red),
+        ),
+        content: const Text(
+          "Apakah Anda yakin akan menghapus data ini?",
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.blue,
+              ),
+              child: const Text("Cancel",
+                  style: TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              DatabaseMethods().deleteTask(ds.id);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                color: Colors.red,
+              ),
+              child: const Text("Delete",
+                  style: TextStyle(fontSize: 16, color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TaskListItem extends StatelessWidget {
+  final DocumentSnapshot taskData;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const TaskListItem({
+    Key? key,
+    required this.taskData,
+    required this.onEdit,
+    required this.onDelete,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 5,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 15),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(10),
+                bottomLeft: Radius.circular(10),
+              ),
+              child: Container(
+                width: 15,
+                height: 140,
+                color: _getTypeColor(taskData['type']),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          taskData['title'],
+                          style: const TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green),
+                        ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: onEdit,
+                              child: const Icon(Icons.edit,
+                                  color: Colors.orange, size: 23),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: onDelete,
+                              child: const Icon(Icons.delete,
+                                  color: Colors.red, size: 23),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 0),
+                    Text(
+                      'Date Line: ${DateFormat('dd-MM-yyyy').format((taskData['dateLine'] as Timestamp).toDate())}',
+                      style: const TextStyle(fontSize: 17, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 0),
+                    Text('Desc: ${taskData['description']}',
+                        style: const TextStyle(fontSize: 15)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type) {
+      case 'Completed':
+        return Colors.green;
+      case 'Task':
+        return Colors.red;
+
+      default:
+        return Colors.grey;
     }
+  }
+}
+
+Future<void> selectDate(
+    BuildContext context, TextEditingController controller) async {
+  final DateTime? picked = await showDatePicker(
+    context: context,
+    initialDate: DateTime.now(),
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2101),
+    builder: (BuildContext context, Widget? child) {
+      return Theme(
+        data: ThemeData.light().copyWith(
+          colorScheme: ColorScheme.light(primary: Colors.blue),
+          textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: Colors.blue)),
+        ),
+        child: child!,
+      );
+    },
+  );
+
+  if (picked != null) {
+    controller.text = DateFormat('dd-MM-yyyy').format(picked);
   }
 }

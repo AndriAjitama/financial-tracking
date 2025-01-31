@@ -1,19 +1,19 @@
-// ignore_for_file: unnecessary_const, use_super_parameters, prefer_const_literals_to_create_immutables, sort_child_properties_last, library_private_types_in_public_api, unnecessary_string_interpolations, unused_local_variable
+// ignore_for_file: unnecessary_const, use_super_parameters, prefer_const_literals_to_create_immutables, sort_child_properties_last, library_private_types_in_public_api
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:financial_tracking/pages/wishlist/add_wishlist.dart';
-import 'package:financial_tracking/pages/wishlist/edit_wishlist.dart';
+import 'package:financial_tracking/pages/money/add_money.dart';
+import 'package:financial_tracking/pages/money/edit_money.dart';
 import 'package:financial_tracking/service/database.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class WishlistTab extends StatelessWidget {
-  const WishlistTab({Key? key}) : super(key: key);
+class MoneyTab extends StatelessWidget {
+  const MoneyTab({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -38,11 +38,12 @@ class WishlistTab extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
-                  labelStyle: TextStyle(fontSize: 12),
-                  tabs: [
+                  labelStyle: const TextStyle(fontSize: 12),
+                  tabs: const [
                     Tab(text: 'All'),
-                    Tab(text: 'Not Yet Achieved'),
-                    Tab(text: 'Already Achieved'),
+                    Tab(text: 'Cash'),
+                    Tab(text: 'Account'),
+                    Tab(text: 'Investment'),
                   ],
                 ),
               ),
@@ -53,11 +54,12 @@ class WishlistTab extends StatelessWidget {
           children: [
             const TotalAmountSummary(),
             Expanded(
-              child: TabBarView(
-                children: const [
-                  ListWishlist(type: null),
-                  ListWishlist(type: 'Not Yet Achieved'),
-                  ListWishlist(type: 'Already Achieved'),
+              child: const TabBarView(
+                children: [
+                  MoneyList(type: null),
+                  MoneyList(type: 'Cash'),
+                  MoneyList(type: 'Account'),
+                  MoneyList(type: 'Investment'),
                 ],
               ),
             ),
@@ -67,10 +69,10 @@ class WishlistTab extends StatelessWidget {
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => AddWishlist()),
+              MaterialPageRoute(builder: (context) => AddMoney()),
             );
           },
-          heroTag: 'addWishlist',
+          heroTag: 'addMoney',
           child: const Icon(Icons.add),
           backgroundColor: Colors.green,
         ),
@@ -84,16 +86,16 @@ class TotalAmountSummary extends StatelessWidget {
 
   Stream<Map<String, double>> _calculateTotalPerType() {
     return FirebaseFirestore.instance
-        .collection('Wishlist')
+        .collection('Money')
         .snapshots()
         .map((snapshot) {
       final docs = snapshot.docs;
 
       Map<String, double> totalPerType = {
         'All': 0,
-        'Not Yet Achieved': 0,
-        'Already Achieved': 0,
-        'Target': 0,
+        'Cash': 0,
+        'Account': 0,
+        'Investment': 0,
       };
 
       for (var doc in docs) {
@@ -104,10 +106,6 @@ class TotalAmountSummary extends StatelessWidget {
           totalPerType[type] = totalPerType[type]! + amount;
         }
       }
-
-      // Hitung Target
-      totalPerType['Target'] =
-          totalPerType['Already Achieved']! - totalPerType['Not Yet Achieved']!;
 
       return totalPerType;
     });
@@ -123,7 +121,7 @@ class TotalAmountSummary extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 5),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
       ),
       child: StreamBuilder<Map<String, double>>(
@@ -134,41 +132,25 @@ class TotalAmountSummary extends StatelessWidget {
           }
 
           final totals = snapshot.data!;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    currencyFormat.format(totals['All']),
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  Text(
-                    currencyFormat.format(totals['Not Yet Achieved']),
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                  Text(
-                    currencyFormat.format(totals['Already Achieved']),
-                    style: const TextStyle(fontSize: 11),
-                  ),
-                ],
+              Text(
+                currencyFormat.format(totals['All']),
+                style: const TextStyle(fontSize: 11),
               ),
-              const SizedBox(height: 0),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Target: ${currencyFormat.format(totals['Target'])}',
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green),
-                  ),
-                ],
-              )
+              Text(
+                currencyFormat.format(totals['Cash']),
+                style: const TextStyle(fontSize: 11),
+              ),
+              Text(
+                currencyFormat.format(totals['Account']),
+                style: const TextStyle(fontSize: 11),
+              ),
+              Text(
+                currencyFormat.format(totals['Investment']),
+                style: const TextStyle(fontSize: 11),
+              ),
             ],
           );
         },
@@ -177,27 +159,25 @@ class TotalAmountSummary extends StatelessWidget {
   }
 }
 
-class ListWishlist extends StatefulWidget {
+class MoneyList extends StatefulWidget {
   final String? type;
-
-  const ListWishlist({Key? key, this.type}) : super(key: key);
+  final String? category;
+  const MoneyList({Key? key, this.type, this.category}) : super(key: key);
 
   @override
-  _WishlistListState createState() => _WishlistListState();
+  _MoneyListState createState() => _MoneyListState();
 }
 
-class _WishlistListState extends State<ListWishlist> {
-  late Stream<QuerySnapshot<Object?>> wishlistStream;
-
-  // var ds;
+class _MoneyListState extends State<MoneyList> {
+  late Stream<QuerySnapshot<Object?>> moneyStream;
 
   @override
   void initState() {
     super.initState();
-    wishlistStream = widget.type == null
-        ? FirebaseFirestore.instance.collection('Wishlist').snapshots()
+    moneyStream = widget.type == null
+        ? FirebaseFirestore.instance.collection('Money').snapshots()
         : FirebaseFirestore.instance
-            .collection('Wishlist')
+            .collection('Money')
             .where('type', isEqualTo: widget.type)
             .snapshots();
   }
@@ -205,14 +185,14 @@ class _WishlistListState extends State<ListWishlist> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot<Object?>>(
-      stream: wishlistStream,
+      stream: moneyStream,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final wishlist = snapshot.data!.docs;
-        if (wishlist.isEmpty) {
+        final money = snapshot.data!.docs;
+        if (money.isEmpty) {
           return const Center(
             child: Text(
               'No items found',
@@ -221,18 +201,18 @@ class _WishlistListState extends State<ListWishlist> {
           );
         }
 
-        wishlist.sort((a, b) {
-          DateTime dateA = (a['planningDate'] as Timestamp).toDate();
-          DateTime dateB = (b['planningDate'] as Timestamp).toDate();
+        money.sort((a, b) {
+          DateTime dateA = (a['date'] as Timestamp).toDate();
+          DateTime dateB = (b['date'] as Timestamp).toDate();
           return dateA.compareTo(dateB);
         });
 
         return ListView.builder(
-          itemCount: wishlist.length,
+          itemCount: money.length,
           itemBuilder: (context, index) {
-            final ds = wishlist[index];
-            return WishlistItem(
-              wishlistData: ds,
+            final ds = money[index];
+            return MoneyListItem(
+              moneyData: ds,
               onEdit: () => _onEdit(context, ds),
               onDelete: () => _onDelete(context, ds),
             );
@@ -249,24 +229,19 @@ class _WishlistListState extends State<ListWishlist> {
         TextEditingController(text: ds["amount"].toString());
     TextEditingController descriptionController =
         TextEditingController(text: ds['description']);
-    TextEditingController planningDateController = TextEditingController(
+    TextEditingController dateController = TextEditingController(
         text: DateFormat('dd-MM-yyyy')
-            .format((ds['planningDate'] as Timestamp).toDate()));
-    TextEditingController dateReachedController = TextEditingController(
-        text: ds['dateReached'] != null
-            ? DateFormat('dd-MM-yyyy')
-                .format((ds['dateReached'] as Timestamp).toDate())
-            : 'Select Date Reached');
+            .format((ds['date'] as Timestamp).toDate()));
 
-    EditWishlist(
+    EditMoney(
       context,
       ds.id,
       ds['type'],
+      ds['category'],
       titleController,
       amountController,
       descriptionController,
-      planningDateController,
-      dateReachedController,
+      dateController,
       selectDate,
     );
   }
@@ -300,7 +275,7 @@ class _WishlistListState extends State<ListWishlist> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              DatabaseMethods().deleteWishlist(ds.id);
+              DatabaseMethods().deleteMoney(ds.id);
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -318,14 +293,36 @@ class _WishlistListState extends State<ListWishlist> {
   }
 }
 
-class WishlistItem extends StatelessWidget {
-  final DocumentSnapshot wishlistData;
+class MoneyListItem extends StatelessWidget {
+  final DocumentSnapshot moneyData;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const WishlistItem({
+  final Map<String, String> categoryImages = {
+    'Wallet': 'assets/images/wallet.png',
+    'Savings': 'assets/images/savings.png',
+    'Bank BCA': 'assets/images/bca.png',
+    'Bank BRI': 'assets/images/bri.png',
+    'Bank BTN': 'assets/images/btn.png',
+    'Bank BNI': 'assets/images/bni.png',
+    'Bank Jago': 'assets/images/jago.png',
+    'Bank Mandiri': 'assets/images/mandiri.png',
+    'Gopay': 'assets/images/gopay.png',
+    'Dana': 'assets/images/dana.png',
+    'ShopeePay': 'assets/images/shopeepay.png',
+    'SeaBank': 'assets/images/seabank.png',
+    'E-Money': 'assets/images/emoney.png',
+    'RDN Wallet': 'assets/images/jago.png',
+    'Bibit': 'assets/images/bibit.png',
+    'Stockbit': 'assets/images/stockbit.png',
+    'Crypto': 'assets/images/crypto.png',
+    'Gold': 'assets/images/gold.png',
+    'Property': 'assets/images/property.png',
+  };
+
+  MoneyListItem({
     Key? key,
-    required this.wishlistData,
+    required this.moneyData,
     required this.onEdit,
     required this.onDelete,
   }) : super(key: key);
@@ -356,8 +353,8 @@ class WishlistItem extends StatelessWidget {
               ),
               child: Container(
                 width: 15,
-                height: 150,
-                color: _getTypeColor(wishlistData['type']),
+                height: 135,
+                color: _getTypeColor(moneyData['type']),
               ),
             ),
             Expanded(
@@ -370,9 +367,9 @@ class WishlistItem extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          wishlistData['title'],
+                          moneyData['category'],
                           style: const TextStyle(
-                              fontSize: 22,
+                              fontSize: 25,
                               fontWeight: FontWeight.bold,
                               color: Colors.green),
                         ),
@@ -393,20 +390,36 @@ class WishlistItem extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 0),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(wishlistData['type'],
-                            style: const TextStyle(fontSize: 15)),
+                        Container(
+                          height: 15,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(0),
+                            color: Colors.transparent,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(0),
+                              child: Image.asset(
+                                categoryImages[moneyData['category']] ??
+                                    'assets/images/rupiah.png',
+                                fit: BoxFit.fitHeight,
+                              ),
+                            ),
+                          ),
+                        ),
                         Text(
-                          'Rp ${NumberFormat.decimalPattern('id').format(wishlistData['amount'])}',
-                          style: TextStyle(
-                              fontSize: 20,
-                              color: wishlistData['type'] == 'Already Achieved'
-                                  ? Colors.green
-                                  : Colors.black,
-                              fontWeight: FontWeight.bold),
+                          'Rp ${NumberFormat.decimalPattern('id').format(moneyData['amount'])}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -414,23 +427,21 @@ class WishlistItem extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Text(moneyData['title'],
+                            style: TextStyle(
+                                fontSize: 17, color: Colors.green.shade400)),
                         Text(
-                          'PD: ${wishlistData['planningDate'] != null ? DateFormat('dd-MM-yyyy').format((wishlistData['planningDate'] as Timestamp).toDate()) : ''}',
-                          style:
-                              const TextStyle(fontSize: 15, color: Colors.grey),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          'DR: ${wishlistData['dateReached'] != null ? DateFormat('dd-MM-yyyy').format((wishlistData['dateReached'] as Timestamp).toDate()) : ''}',
+                          DateFormat('dd-MM-yyyy').format(
+                              (moneyData['date'] as Timestamp).toDate()),
                           style:
                               const TextStyle(fontSize: 15, color: Colors.grey),
                         ),
                       ],
                     ),
                     const SizedBox(height: 0),
-                    Text(wishlistData['description'],
-                        style:
-                            const TextStyle(fontSize: 14, color: Colors.grey)),
+                    Text(moneyData['description'],
+                        style: TextStyle(
+                            fontSize: 15, color: Colors.grey.shade400)),
                   ],
                 ),
               ),
@@ -443,10 +454,12 @@ class WishlistItem extends StatelessWidget {
 
   Color _getTypeColor(String type) {
     switch (type) {
-      case 'Already Achieved':
-        return Colors.green;
-      case 'Not Yet Achieved':
-        return Colors.red;
+      case 'Cash':
+        return Colors.green.shade300;
+      case 'Account':
+        return Colors.green.shade600;
+      case 'Investment':
+        return Colors.green.shade800;
       default:
         return Colors.grey;
     }
